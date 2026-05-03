@@ -23,6 +23,13 @@ If `$ARGUMENTS` is free text, treat it as a project description and ask the user
 
 ### Phase 0 — Discover
 
+**Resolve template & docs location first.** The meta-agents need `templates/` and `docs/QA-RUBRIC.md`. Look in this order:
+1. `<project_root>/.subteams/` (project-local install)
+2. `~/.claude/.subteams/` (global install via `install.sh --global`)
+3. The SubTeams repo itself, if running from there directly
+
+If none exist, tell the user to run `install.sh` first and stop.
+
 Gather just enough about the project to brief the meta-team. Do not over-read.
 
 ```

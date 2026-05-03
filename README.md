@@ -65,13 +65,25 @@ The repo's `.claude/settings.json` already has this flag — but it only applies
 git clone https://github.com/Euryalus-Kay/SubTeams.git ~/SubTeams
 ```
 
-### 2 — Install into a target project
+### 2 — Install
+
+**Option A — Globally (every Claude Code chat on your machine):**
+
+```sh
+~/SubTeams/install.sh --global
+```
+
+This installs into `~/.claude/agents/`, `~/.claude/commands/`, and `~/.claude/.subteams/`. After this, `/build-team`, `/run-team`, and `/review-team` are available in any project — no per-project setup needed.
+
+**Option B — Per project (just this one):**
 
 ```sh
 ~/SubTeams/install.sh /path/to/your/project
 ```
 
-This copies the four meta-agents, the `/build-team` and `/review-team` commands, the templates the generator uses, and the QA rubric into your project (under `.claude/` and `.subteams/`). It does not touch any existing files.
+Writes to `<project>/.claude/` and `<project>/.subteams/`. Useful when you want SubTeams visible only in specific repos (e.g. so it doesn't show up in unrelated personal projects).
+
+Either way, the script does not overwrite existing agents/commands — it skips files already present and prints a SKIP line.
 
 ### 3 — Open the target project in Claude Code, then run
 
