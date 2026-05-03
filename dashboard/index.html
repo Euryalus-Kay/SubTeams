@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SubTeams Dashboard</title>
+<style>
+  :root {
+    --bg: #0b1120;
+    --panel: #111a2e;
+    --panel-2: #182238;
+    --border: #1f2c4a;
+    --text: #e6ecf5;
+    --muted: #8a98b3;
+    --dim: #5a6883;
+    --accent: #f97316;
+    --accent-soft: #2a1c12;
+    --green: #22c55e;
+    --green-soft: #0f2a1a;
+    --yellow: #eab308;
+    --yellow-soft: #2a2110;
+    --red: #ef4444;
+    --red-soft: #2a1414;
+    --blue: #60a5fa;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Text",
+          system-ui, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  code, pre, .mono {
+    font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+  }
+
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px;
+    background: rgba(11, 17, 32, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.2px;
+  }
+  header .sub { color: var(--muted); font-size: 12px; margin-left: 8px; }
+  header .meta { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 12px; }
+  .pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+    70%  { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  }
+
+  main { padding: 24px; max-width: 1500px; margin: 0 auto; }
+
+  .empty {
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .empty h2 { margin: 0 0 8px 0; color: var(--text); font-size: 16px; }
+  .empty p  { margin: 4px 0; }
+  .empty code {
+    background: var(--panel); padding: 2px 6px; border-radius: 4px;
+    color: var(--accent);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  @media (min-width: 1100px) {
+    .grid { grid-template-columns: 1fr 360px; }
+  }
+
+  .team-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .team-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .team-name { font-size: 15px; font-weight: 600; letter-spacing: 0.2px; }
+  .team-stats { display: flex; gap: 12px; font-size: 12px; color: var(--muted); }
+  .team-stats b { color: var(--text); font-weight: 600; }
+
+  .section-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.6px; color: var(--dim);
+    padding: 16px 18px 6px;
+  }
+
+  .roster {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    padding: 4px 18px 16px;
+  }
+  .agent {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .agent .name { font-weight: 600; font-size: 13.5px; }
+  .agent .type { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .agent .id   { color: var(--dim); font-size: 11px; margin-top: 4px; word-break: break-all; }
+
+  .pill {
+    display: inline-block; padding: 1px 8px; border-radius: 9999px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.2px;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--border);
+  }
+  .pill.green   { color: var(--green);  background: var(--green-soft);  border-color: rgba(34,197,94,0.3); }
+  .pill.yellow  { color: var(--yellow); background: var(--yellow-soft); border-color: rgba(234,179,8,0.3); }
+  .pill.orange  { color: var(--accent); background: var(--accent-soft); border-color: rgba(249,115,22,0.3); }
+  .pill.red     { color: var(--red);    background: var(--red-soft);    border-color: rgba(239,68,68,0.3); }
+  .pill.blue    { color: var(--blue);   background: rgba(96,165,250,0.1); border-color: rgba(96,165,250,0.3); }
+
+  table.tasks {
+    width: 100%; border-collapse: collapse;
+    margin: 4px 0 12px;
+    font-size: 13px;
+  }
+  table.tasks th, table.tasks td {
+    text-align: left; padding: 8px 18px; border-top: 1px solid var(--border);
+  }
+  table.tasks th {
+    font-weight: 600; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.6px; color: var(--dim); padding-bottom: 6px;
+    border-top: none;
+  }
+  table.tasks td .title { font-weight: 500; }
+  table.tasks td .desc  { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  table.tasks tr:hover  { background: var(--panel-2); }
+
+  .activity-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    height: fit-content;
+    position: sticky; top: 70px;
+  }
+  .activity-list { max-height: calc(100vh - 220px); overflow: auto; }
+  .activity-item {
+    padding: 10px 18px;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .activity-item:first-child { border-top: none; }
+  .activity-item:hover { background: var(--panel-2); }
+  .activity-item .path { font-size: 12.5px; word-break: break-all; }
+  .activity-item .meta { color: var(--dim); font-size: 11px; margin-top: 2px; display: flex; justify-content: space-between; }
+  .activity-item.active { background: var(--accent-soft); border-left: 2px solid var(--accent); padding-left: 16px; }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center; z-index: 50;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: min(900px, calc(100% - 48px));
+    max-height: calc(100vh - 80px);
+    display: flex; flex-direction: column;
+  }
+  .modal-head {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-head .name { font-weight: 600; }
+  .modal-head .close {
+    background: none; border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 13px;
+  }
+  .modal-body {
+    overflow: auto; padding: 16px 18px;
+  }
+  .modal-body pre {
+    margin: 0; white-space: pre-wrap; word-break: break-word;
+    color: var(--text); font-size: 12.5px; line-height: 1.55;
+  }
+
+  .footer {
+    color: var(--dim); font-size: 11px; text-align: center;
+    padding: 24px 0 12px; letter-spacing: 0.4px;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>SubTeams Dashboard</h1>
+      <span class="sub">Live view of all running teams</span>
+    </div>
+    <div class="meta">
+      <span id="updated">—</span>
+      <span class="pulse" title="Auto-refreshing every 2s"></span>
+    </div>
+  </header>
+
+  <main>
+    <div id="empty" class="empty" style="display:none">
+      <h2>No active teams yet</h2>
+      <p>Run <code>/build-team</code> or <code>/run-team &lt;task&gt;</code> in Claude Code to spawn a team.</p>
+      <p style="margin-top:14px">This dashboard polls <code>~/.claude/teams/</code> and <code>~/.claude/tasks/</code> every 2 seconds.</p>
+    </div>
+
+    <div class="grid" id="grid" style="display:none">
+      <div id="teams"></div>
+      <aside class="activity-panel">
+        <div class="section-label">Recent activity</div>
+        <div class="activity-list" id="activity"></div>
+      </aside>
+    </div>
+
+    <div class="footer">SubTeams · github.com/Euryalus-Kay/SubTeams</div>
+  </main>
+
+  <div id="modal" class="modal-backdrop" onclick="if(event.target===this) closeModal()">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="name" id="modal-name">file</div>
+        <button class="close" onclick="closeModal()">Close</button>
+      </div>
+      <div class="modal-body"><pre id="modal-body">loading…</pre></div>
+    </div>
+  </div>
+
+<script>
+  const fmtRel = (ts) => {
+    const s = Math.floor((Date.now() / 1000) - ts);
+    if (s < 5)    return "just now";
+    if (s < 60)   return `${s}s ago`;
+    if (s < 3600) return `${Math.floor(s/60)}m ago`;
+    if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+    return `${Math.floor(s/86400)}d ago`;
+  };
+  const fmtSize = (n) => {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024*1024) return `${(n/1024).toFixed(1)} KB`;
+    return `${(n/1024/1024).toFixed(1)} MB`;
+  };
+  const escape = (s) => String(s).replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
+
+  function statusPill(status) {
+    const s = String(status || "").toLowerCase();
+    if (s === "completed") return `<span class="pill green">completed</span>`;
+    if (s === "in_progress" || s === "in-progress" || s === "active")
+      return `<span class="pill orange">in progress</span>`;
+    if (s === "blocked") return `<span class="pill red">blocked</span>`;
+    if (s === "pending") return `<span class="pill">pending</span>`;
+    return `<span class="pill">${escape(s) || "—"}</span>`;
+  }
+
+  function renderTeam(t) {
+    const cfg = t.config || {};
+    const members = Array.isArray(cfg.members) ? cfg.members : [];
+    const tasks = (t.tasks || []).slice().sort((a, b) => {
+      const order = { in_progress: 0, "in-progress": 0, active: 0, pending: 1, blocked: 2, completed: 3 };
+      const sa = order[String(a.status || "").toLowerCase()] ?? 4;
+      const sb = order[String(b.status || "").toLowerCase()] ?? 4;
+      return sa - sb || (a.id ?? "").localeCompare(b.id ?? "");
+    });
+
+    return `
+      <div class="team-card">
+        <div class="team-head">
+          <div>
+            <div class="team-name">${escape(t.name)}</div>
+            ${cfg.description ? `<div class="sub" style="color:var(--muted);font-size:12px;margin-top:2px">${escape(cfg.description)}</div>` : ""}
+          </div>
+          <div class="team-stats">
+            <span><b>${members.length}</b> members</span>
+            <span><b>${t.in_progress}</b> active</span>
+            <span><b>${t.completed}</b>/<b>${t.task_count}</b> done</span>
+            ${t.blocked > 0 ? `<span style="color:var(--red)"><b>${t.blocked}</b> blocked</span>` : ""}
+          </div>
+        </div>
+
+        <div class="section-label">Roster (${members.length})</div>
+        <div class="roster">
+          ${members.map(m => `
+            <div class="agent">
+              <div class="name">${escape(m.name || "?")}</div>
+              <div class="type">${escape(m.agentType || m.role || "agent")}</div>
+              ${m.agentId ? `<div class="id mono">${escape(m.agentId)}</div>` : ""}
+            </div>
+          `).join("") || `<div style="color:var(--muted);font-size:13px;padding:0 6px">no members in config</div>`}
+        </div>
+
+        <div class="section-label">Tasks (${tasks.length})</div>
+        ${tasks.length === 0
+          ? `<div style="padding:0 18px 16px;color:var(--muted);font-size:13px">no tasks created yet</div>`
+          : `<table class="tasks">
+              <thead><tr>
+                <th style="width:60px">#</th>
+                <th>Title</th>
+                <th style="width:140px">Owner</th>
+                <th style="width:130px">Status</th>
+                <th style="width:90px">Updated</th>
+              </tr></thead>
+              <tbody>
+                ${tasks.map(task => `
+                  <tr>
+                    <td class="mono" style="color:var(--dim)">${escape(task.id ?? task._filename ?? "")}</td>
+                    <td>
+                      <div class="title">${escape(task.title || task.name || task.content || "(untitled)")}</div>
+                      ${task.description ? `<div class="desc">${escape(task.description).slice(0, 220)}</div>` : ""}
+                    </td>
+                    <td class="mono">${escape(task.owner || "—")}</td>
+                    <td>${statusPill(task.status)}</td>
+                    <td class="mono" style="color:var(--dim)">${task._mtime ? fmtRel(task._mtime) : "—"}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>`
+        }
+      </div>
+    `;
+  }
+
+  let currentFilePath = null;
+
+  async function refresh() {
+    try {
+      const r = await fetch("/api/state", { cache: "no-store" });
+      const data = await r.json();
+      const empty = document.getElementById("empty");
+      const grid = document.getElementById("grid");
+
+      document.getElementById("updated").textContent = "updated " + new Date().toLocaleTimeString();
+
+      if (!data.teams || data.teams.length === 0) {
+        empty.style.display = "block";
+        grid.style.display = "none";
+        return;
+      }
+      empty.style.display = "none";
+      grid.style.display = "grid";
+
+      document.getElementById("teams").innerHTML = data.teams.map(renderTeam).join("");
+
+      const act = data.activity || [];
+      document.getElementById("activity").innerHTML = act.length === 0
+        ? `<div style="padding:14px 18px;color:var(--muted);font-size:13px">no scratch files watched. Add <code>--watch &lt;dir&gt;</code> when starting the dashboard to surface intermediate artifacts.</div>`
+        : act.map(a => `
+            <div class="activity-item ${a.path === currentFilePath ? "active" : ""}"
+                 onclick='openFile(${JSON.stringify(a.path)}, ${JSON.stringify(a.rel)})'>
+              <div class="path mono">${escape(a.rel)}</div>
+              <div class="meta">
+                <span>${fmtSize(a.size)}</span>
+                <span>${fmtRel(a.mtime)}</span>
+              </div>
+            </div>
+          `).join("");
+    } catch (e) {
+      document.getElementById("updated").textContent = "connection lost — retrying";
+    }
+  }
+
+  async function openFile(path, label) {
+    currentFilePath = path;
+    document.getElementById("modal-name").textContent = label || path;
+    document.getElementById("modal-body").textContent = "loading…";
+    document.getElementById("modal").classList.add("show");
+    try {
+      const r = await fetch("/api/file?path=" + encodeURIComponent(path));
+      if (!r.ok) {
+        document.getElementById("modal-body").textContent = `error ${r.status}: ${await r.text()}`;
+        return;
+      }
+      document.getElementById("modal-body").textContent = await r.text();
+    } catch (e) {
+      document.getElementById("modal-body").textContent = "error: " + e;
+    }
+  }
+
+  function closeModal() {
+    document.getElementById("modal").classList.remove("show");
+    currentFilePath = null;
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+
+  refresh();
+  setInterval(refresh, 2000);
+</script>
+</body>
+</html>

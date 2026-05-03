@@ -81,7 +81,7 @@ for f in practice-researcher project-analyzer team-architect team-qa-reviewer; d
 done
 
 # Copy commands. run-team is generic — it reads TEAM_SPEC.json at runtime.
-for f in build-team run-team review-team; do
+for f in build-team run-team review-team team-status team-dashboard; do
   if [[ -f "$COMMANDS_DIR/$f.md" ]]; then
     echo "  SKIP existing: $COMMANDS_DIR/$f.md"
   else
@@ -103,6 +103,13 @@ cp "$SOURCE/docs/PATTERNS.md" "$SUBTEAMS_DIR/docs/PATTERNS.md"
 cp "$SOURCE/docs/DESIGN-PRINCIPLES.md" "$SUBTEAMS_DIR/docs/DESIGN-PRINCIPLES.md"
 cp "$SOURCE/docs/ARCHITECTURE.md" "$SUBTEAMS_DIR/docs/ARCHITECTURE.md"
 echo "  + $SUBTEAMS_DIR/docs/ (4 reference docs)"
+
+# Copy dashboard (server.py + index.html)
+mkdir -p "$SUBTEAMS_DIR/dashboard"
+cp "$SOURCE/dashboard/server.py"  "$SUBTEAMS_DIR/dashboard/server.py"
+cp "$SOURCE/dashboard/index.html" "$SUBTEAMS_DIR/dashboard/index.html"
+chmod +x "$SUBTEAMS_DIR/dashboard/server.py"
+echo "  + $SUBTEAMS_DIR/dashboard/ (server.py, index.html)"
 
 # Settings: enable Agent Teams flag if not already present
 if [[ -f "$SETTINGS_PATH" ]]; then
@@ -131,6 +138,7 @@ echo ""
 if [[ "$MODE" == "global" ]]; then
   echo "Available in EVERY Claude Code chat on this machine:"
   echo "  /build-team    /run-team    /review-team"
+  echo "  /team-status   /team-dashboard"
   echo ""
   echo "Templates and docs the meta-agents reference live at:"
   echo "  $SUBTEAMS_DIR/"
