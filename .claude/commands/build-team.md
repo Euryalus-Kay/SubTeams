@@ -11,13 +11,65 @@ The user's experimental Teams feature is enabled (`CLAUDE_CODE_EXPERIMENTAL_AGEN
 
 ## Input
 
-`$ARGUMENTS` — the project description, a path, a goal, or empty.
+`$ARGUMENTS` — flexible. Accepts (in any combination):
+
+**Constraint flags** (parsed first; tell the architect what is non-negotiable):
+
+| Flag | Effect |
+|---|---|
+| `--with <comma-list>` | These roles or named agents MUST be included. e.g. `--with security-reviewer,docs-writer` |
+| `--without <comma-list>` | These roles MUST NOT be included. e.g. `--without verifier` (when you have CI handling that) |
+| `--agents <N>` | Force the team size to exactly N (still 3 ≤ N ≤ 7) |
+| `--pattern <name>` | Force the pattern: `orchestrator-worker`, `parallel-sectioning`, `sequential-pipeline`, `evaluator-optimizer`, `router`, `hybrid` |
+| `--model <agent=model,...>` | Override default model per agent. e.g. `--model security-reviewer=opus,test-runner=sonnet` |
+| `--topology <subagent\|agent-team>` | Force communication topology |
+| `--scratch <dir>` | Override the scratch directory path (default `.claude/.team-builder-scratch`) |
+| `--path <dir>` | Treat this directory as the project root (instead of cwd) |
+
+**Free-form requirements** (everything not parsed as a flag):
+- Treated as natural-language instructions / hints / description
+- Examples: `"focus the security reviewer on CSRF and SSRF specifically"`, `"this is a CLI tool, no frontend specialists needed"`, `"use my project's existing dbt test command in the verifier"`
+
+**Examples:**
+```
+/build-team
+/build-team /path/to/project
+/build-team --with security-reviewer,docs-writer
+/build-team --agents 5 --without verifier
+/build-team --pattern parallel-sectioning add me a research synthesis team
+/build-team --with accessibility-reviewer this app must meet WCAG 2.1 AA
+/build-team --model security-reviewer=opus build a security-paranoid SaaS team
+```
 
 If `$ARGUMENTS` is empty, the project is the **current working directory**. Auto-detect by reading `README.md`, `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, top-level files, and the directory tree (3 levels deep).
 
-If `$ARGUMENTS` looks like a path, treat it as the project root.
+## Parsing $ARGUMENTS
 
-If `$ARGUMENTS` is free text, treat it as a project description and ask the user one clarifying question if needed (no more).
+Walk the input token by token:
+1. If a token starts with `--`, parse it and the next token as a flag pair (or the value after `=`). Validate against the table above.
+2. Anything not consumed by flag parsing is concatenated as the **free-form requirements / description**.
+3. Build a `user_requirements` object:
+
+```json
+{
+  "with": ["security-reviewer", "docs-writer"],
+  "without": [],
+  "force_agents": null,
+  "force_pattern": null,
+  "force_models": {},
+  "force_topology": null,
+  "scratch_override": null,
+  "free_form": "focus the security reviewer on CSRF and SSRF specifically"
+}
+```
+
+4. **Pass this object verbatim to `team-architect`** in Phase 3. The architect treats `with`, `without`, `force_*` fields as **hard constraints** and the `free_form` field as **strong hints**.
+
+5. **If a flag conflicts with a hard rule** (e.g. `--agents 12` exceeds the cap of 7, or `--without orchestrator` removes the lead), reject the flag explicitly with a one-line explanation and stop. Do not silently ignore.
+
+If `$ARGUMENTS` (after stripping flags) looks like a path, treat it as the project root.
+
+If `$ARGUMENTS` (after stripping flags) is free text, treat it as project description / hints. Ask one clarifying question only if the project's primary goal is genuinely ambiguous after Phase 0 — not because the user gave you constraints.
 
 ## Pipeline (5 phases)
 
@@ -73,7 +125,13 @@ Wait for both to complete (they will message you when done — message-passing i
 
 ### Phase 3 — Architect & generate
 
-Send the research report and requirements to `team-architect`. Ask it to produce a `TEAM_SPEC.json` conforming to `templates/team-spec.schema.json`. The spec must include:
+Send the research report, requirements, **and the parsed `user_requirements` object** to `team-architect`. The architect must:
+- Treat `with` / `without` / `force_*` fields as hard constraints
+- Treat `free_form` as strong hints (override its defaults but not the hard rules in `docs/QA-RUBRIC.md`)
+- Justify in `architecture-rationale.md` how each user requirement was honored
+- If a constraint cannot be satisfied without violating a hard rule (e.g. user said `--without reviewer` but the QA rubric requires at least one reviewer or hook), refuse with a one-line explanation routed back through you to the user
+
+Ask it to produce a `TEAM_SPEC.json` conforming to `templates/team-spec.schema.json`. The spec must include:
 - Pattern selection (orchestrator-worker / parallel / sequential / evaluator-optimizer / router) with rationale
 - Agent list (3–7 agents) with name, role, model, tools, responsibilities, stop criteria, file ownership
 - Quality gates (review loops, hooks, max turns)

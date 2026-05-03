@@ -14,13 +14,46 @@ You will receive (from the meta-orchestrator):
 - Path to `.claude/.team-builder-scratch/research-report.md`
 - Path to `.claude/.team-builder-scratch/requirements.md`
 - Path to `templates/team-spec.schema.json` (in the SubTeams repo)
+- A **`user_requirements` object** with constraints from the user's `/build-team` flags. May be all-empty if the user gave no flags. Schema:
 
-1. Read all three.
-2. **Draft the spec** following the schema. Do not invent fields not in the schema.
-3. **Self-check against the rules below before writing.** A spec that violates these will be rejected by `team-qa-reviewer` and you will be re-spawned.
-4. Write the spec to `.claude/.team-builder-scratch/TEAM_SPEC.json`.
-5. Write a one-page **rationale** to `.claude/.team-builder-scratch/architecture-rationale.md` explaining each decision (pattern choice, why N agents not N+1, why each role exists, why the file ownership map looks the way it does).
-6. Send a summary to the meta-orchestrator and mark your task completed.
+```json
+{
+  "with": ["role-or-agent-name", ...],         // MUST include these
+  "without": ["role", ...],                     // MUST NOT include these
+  "force_agents": null | <int 3..7>,            // exact agent count
+  "force_pattern": null | "<pattern>",          // force pattern
+  "force_models": {"agent-name": "model", ...}, // override defaults
+  "force_topology": null | "subagent" | "agent-team",
+  "scratch_override": null | "<dir>",
+  "free_form": "..."                            // natural-language hints
+}
+```
+
+1. Read all three documents.
+2. **Apply user_requirements as constraints** before drafting:
+   - Every name in `with` must appear in your `agents[]`. If it's a role keyword (e.g. `security-reviewer`), create a reviewer with that focus. If it's a custom name, treat as a specialist.
+   - No agent's `role` may match anything in `without` — UNLESS removing it would violate a Critical rule below (in which case refuse and report).
+   - If `force_agents` is set, your `agents.length` must equal it exactly (still within 3..7).
+   - If `force_pattern` is set, use it. Note in the rationale that this overrode your default choice.
+   - If `force_models` is set, set those agents' `model` accordingly.
+   - If `force_topology` is set, use it.
+   - If `scratch_override` is set, use it for `shared_context.scratch_dir`.
+   - `free_form` is strong guidance — let it shape responsibilities, focus, tool grants, naming. But it cannot override the 14 hard rules below.
+3. **Draft the spec** following the schema. Do not invent fields not in the schema.
+4. **Self-check against the rules below before writing.** A spec that violates these will be rejected by `team-qa-reviewer` and you will be re-spawned.
+5. Write the spec to `.claude/.team-builder-scratch/TEAM_SPEC.json`.
+6. Write a one-page **rationale** to `.claude/.team-builder-scratch/architecture-rationale.md`. Include a **"User requirements honored"** section that walks through each user constraint and shows how the spec satisfies it (or explains the refusal).
+7. Send a summary to the meta-orchestrator and mark your task completed.
+
+## Refusing impossible requirements
+
+If a user requirement conflicts with a hard rule (rules 1–14 below), you must **refuse, not silently ignore**. Examples:
+- `--without orchestrator` → refuse: every team needs exactly one orchestrator (rule 2).
+- `--without reviewer --without verifier` AND no quality-gate hook in the project → refuse: at least one quality gate is required (rule 3).
+- `--agents 2` or `--agents 9` → refuse: range is 3–7 (rule 1).
+- `--with file-deleter` (anything that implies destructive autonomy without user confirmation) → refuse: violates safety rules.
+
+Refusal format: send the meta-orchestrator a message starting with `REFUSE:` followed by a one-sentence explanation citing the rule. The orchestrator will surface this to the user.
 
 # The spec must contain
 

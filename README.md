@@ -96,6 +96,31 @@ The meta-team takes over. After a few minutes you'll have:
 - `your-project/.claude/commands/run-team.md` — the runtime entry point
 - `your-project/.claude/.team-builder-scratch/TEAM_SPEC.json` — the spec for traceability
 
+#### Constraining the build
+
+Pass flags to `/build-team` to lock in non-negotiables before the architect picks defaults:
+
+```
+/build-team --with security-reviewer,docs-writer
+/build-team --agents 5 --without verifier
+/build-team --pattern parallel-sectioning  research synthesis project
+/build-team --model security-reviewer=opus  this app handles PII
+/build-team --without verifier  no need, my CI handles tests
+```
+
+| Flag | Effect |
+|---|---|
+| `--with <list>` | Roles or named agents that MUST appear |
+| `--without <list>` | Roles that MUST NOT appear |
+| `--agents <N>` | Force exact agent count (3–7) |
+| `--pattern <name>` | Force one of the 6 patterns |
+| `--model <a=m,b=m>` | Override default model per agent |
+| `--topology <subagent\|agent-team>` | Force communication topology |
+| `--scratch <dir>` | Override scratch dir |
+| `--path <dir>` | Use this dir as project root |
+
+Anything after the flags is treated as **free-form requirements** the architect uses as strong hints. If a flag conflicts with a hard rule (e.g. `--agents 12`, `--without orchestrator`), the architect refuses with a one-line explanation rather than silently ignoring.
+
 ### 4 — Run the team on a task
 
 ```
