@@ -33,12 +33,14 @@ Wrap any of these with evaluator-optimizer if quality is gradeable.
 
 | Role | Tools | Default model |
 |---|---|---|
-| Orchestrator | All tools (must include `Agent`) | opus |
-| Researcher | Read, Grep, Glob, Bash, WebSearch, WebFetch (no Write/Edit outside scratch) | opus or sonnet |
-| Implementer | Read, Edit, Write, Glob, Grep, Bash (scoped by `owns_files`) | sonnet or opus |
-| Reviewer | Read, Grep, Glob, Bash (read-only) | opus |
-| Verifier | Read, Bash (read-only + run tests/lint/build) | sonnet |
-| Specialist | Whatever the role demands, explicitly enumerated | varies |
+| Orchestrator | All tools (must include `Agent`) | **opus** |
+| Researcher | Read, Grep, Glob, Bash, WebSearch, WebFetch (no Write/Edit outside scratch) | **opus** |
+| Implementer | Read, Edit, Write, Glob, Grep, Bash (scoped by `owns_files`) | **opus** |
+| Reviewer | Read, Grep, Glob, Bash (read-only) | **opus** |
+| Verifier | Read, Bash (read-only + run tests/lint/build) | **opus** |
+| Specialist | Whatever the role demands, explicitly enumerated | **opus** |
+
+**Default is always Opus 4.7 for every role.** Quality is the sole optimization target — cost and speed are explicitly out of scope. The only exception is when the user passes `--model <agent>=<other>` to `/build-team`, which overrides per-agent.
 
 ## Twelve design rules (compressed)
 
@@ -57,14 +59,16 @@ Wrap any of these with evaluator-optimizer if quality is gradeable.
 
 ## Three default starter rosters
 
+Every agent below is **opus 4.7** unless `--model` overrides per-agent.
+
 **Code project (web app, library, CLI):**
-orchestrator (opus) + researcher (sonnet) + 1–3 implementers (sonnet, partitioned) + reviewer (opus, read-only) + verifier (hook or sonnet)
+orchestrator + researcher + 1–3 implementers (partitioned) + reviewer (read-only) + verifier (hook or agent)
 
 **Research / synthesis:**
-orchestrator (opus) + 2–3 researchers (sonnet, parallel sectioning) + synthesizer-specialist (opus) + reviewer (opus, factual accuracy + citations)
+orchestrator + 2–3 researchers (parallel sectioning) + synthesizer-specialist + reviewer (factual accuracy + citations)
 
 **Data pipeline:**
-orchestrator (opus) + schema-analyzer-specialist (sonnet) + implementer (sonnet, transforms) + reviewer (opus, data quality) + verifier (hook for tests/lint)
+orchestrator + schema-analyzer-specialist + implementer (transforms) + reviewer (data quality) + verifier (hook for tests/lint)
 
 ## Communication topology
 

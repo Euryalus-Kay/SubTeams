@@ -107,7 +107,7 @@ Refusal format: send the meta-orchestrator a message starting with `REFUSE:` fol
 7. **The orchestrator's `responsibilities` must explicitly include "delegate first, do not execute specialist work in your own context."** This is the documented #1 lead-agent failure mode.
 8. **Every agent must have a `stop_criteria`.** "When the work is done" is not acceptable — be specific.
 9. **`max_turns` defaults: orchestrator 50, implementers 40, researchers 30, reviewers 15, verifiers 10.** Justify any deviation in the rationale doc.
-10. **`model`: default to `opus` for orchestrator and reviewer; `sonnet` or `opus` for implementers; `haiku` only for high-volume mechanical specialists.** The user has said quality > cost; bias toward Opus.
+10. **`model`: ALWAYS `opus` for every agent — orchestrator, researcher, implementer, reviewer, verifier, specialist.** The user has explicitly stated Opus 4.7 is the best model and that quality is the only optimization target. Do NOT use sonnet or haiku as defaults. The only exception is when the user passes `--model <agent>=<other>` in `user_requirements.force_models` — that explicit override wins per-agent.
 11. **`trigger_phrase` must be specific.** "expert in X" is bad. "Use proactively after any change to <module>" is good. This becomes the agent's `description` field, which is what Claude Code uses to route work.
 12. **`communicates_with` defines the messaging graph for Agent Teams mode.** If `communication_topology: subagent`, this field describes intended logical flow but no peer messaging happens.
 13. **`shared_context.claude_md_additions` must be ≤ 30 lines.** It is appended to the user's CLAUDE.md and read on every session — do not bloat it.
@@ -115,10 +115,12 @@ Refusal format: send the meta-orchestrator a message starting with `REFUSE:` fol
 
 # Default starter rosters (use as a baseline, then adapt)
 
-- **Code project (web app, library, CLI):** orchestrator, researcher, 1–3 implementers (partitioned by module), reviewer (read-only critic), verifier (test runner via hook).
-- **Research / synthesis project:** orchestrator, 2–3 researchers in parallel sectioning, synthesizer (specialist), reviewer (factual accuracy + citations).
-- **Data pipeline project:** orchestrator, schema-analyzer (specialist), implementer (transforms), reviewer (data quality), verifier (test/lint hook).
-- **Greenfield / spec-only:** orchestrator, requirements-elicitor (researcher with WebSearch), spec-writer (specialist), reviewer.
+Every agent in every roster below uses `model: opus` unless the user's `--model` flag overrides per-agent.
+
+- **Code project (web app, library, CLI):** orchestrator (opus), researcher (opus), 1–3 implementers (opus, partitioned by module), reviewer (opus, read-only critic), verifier (opus, test runner via hook).
+- **Research / synthesis project:** orchestrator (opus), 2–3 researchers (opus, parallel sectioning), synthesizer (opus, specialist), reviewer (opus, factual accuracy + citations).
+- **Data pipeline project:** orchestrator (opus), schema-analyzer (opus, specialist), implementer (opus, transforms), reviewer (opus, data quality), verifier (opus, test/lint hook).
+- **Greenfield / spec-only:** orchestrator (opus), requirements-elicitor (opus, researcher with WebSearch), spec-writer (opus, specialist), reviewer (opus).
 
 These are starting points, not mandates. The research report's pattern recommendation overrides them.
 

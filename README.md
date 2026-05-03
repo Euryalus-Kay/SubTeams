@@ -148,11 +148,11 @@ Team built: saas-feature-team
 Pattern: orchestrator-worker — code-heavy with predictable layer split, EO wrap on security
 Agents: 6
   · feature-lead              (orchestrator, opus)    — coordinates, never edits
-  · frontend-implementer      (implementer,  sonnet)  — owns app/, components/, styles/
-  · api-implementer           (implementer,  sonnet)  — owns app/api/, middleware.ts
-  · db-implementer            (implementer,  sonnet)  — owns db/, drizzle.config.ts
+  · frontend-implementer      (implementer,  opus)    — owns app/, components/, styles/
+  · api-implementer           (implementer,  opus)    — owns app/api/, middleware.ts
+  · db-implementer            (implementer,  opus)    — owns db/, drizzle.config.ts
   · security-reviewer         (reviewer,     opus)    — read-only, OWASP lens, gates every diff
-  · test-runner               (verifier,     sonnet)  — runs vitest + eslint + tsc + next build
+  · test-runner               (verifier,     opus)    — runs vitest + eslint + tsc + next build
 
 Quality gates:
   · review-loop after every implementer (max 3 iterations)

@@ -12,63 +12,128 @@
       "role": "orchestrator",
       "template": "orchestrator",
       "model": "opus",
-      "tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Agent", "TeamCreate", "TeamDelete", "SendMessage", "TaskCreate", "TaskUpdate", "TaskList", "TodoWrite"],
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Bash",
+        "Agent",
+        "TeamCreate",
+        "TeamDelete",
+        "SendMessage",
+        "TaskCreate",
+        "TaskUpdate",
+        "TaskList",
+        "TodoWrite"
+      ],
       "responsibilities": "Owns the pipeline change end-to-end. Coordinates schema-analyzer (which understands current dbt graph) with transform-implementer (which writes Python). Runs data-quality-reviewer after every change. Runs test-runner before declaring done.",
-      "trigger_phrase": "Use for any change to the data pipeline — new model, new transform, schema migration, or downstream consumer update.",
+      "trigger_phrase": "Use for any change to the data pipeline \u2014 new model, new transform, schema migration, or downstream consumer update.",
       "stop_criteria": "All sub-tasks complete, data-quality-reviewer APPROVE, test-runner PASS, summary delivered.",
       "max_turns": 50,
-      "communicates_with": ["schema-analyzer", "transform-implementer", "data-quality-reviewer", "test-runner"]
+      "communicates_with": [
+        "schema-analyzer",
+        "transform-implementer",
+        "data-quality-reviewer",
+        "test-runner"
+      ]
     },
     {
       "name": "schema-analyzer",
       "role": "specialist",
       "template": "specialist",
-      "model": "sonnet",
-      "tools": ["Read", "Edit", "Write", "Glob", "Grep", "Bash"],
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash"
+      ],
       "responsibilities": "Owns the dbt schema layer. Understands current model dependencies (dbt ls --output json). For any change, analyzes downstream impact, proposes the schema update, writes the dbt SQL.",
       "trigger_phrase": "Use when a sub-task touches dbt models, schema.yml, sources, or any .sql file under models/.",
       "stop_criteria": "Schema change made, downstream impact documented, lead messaged with files-changed.",
       "max_turns": 30,
-      "owns_files": ["models/**/*.sql", "models/**/schema.yml", "models/**/sources.yml", "dbt_project.yml"],
-      "communicates_with": ["pipeline-lead", "transform-implementer"]
+      "owns_files": [
+        "models/**/*.sql",
+        "models/**/schema.yml",
+        "models/**/sources.yml",
+        "dbt_project.yml"
+      ],
+      "communicates_with": [
+        "pipeline-lead",
+        "transform-implementer"
+      ]
     },
     {
       "name": "transform-implementer",
       "role": "implementer",
       "template": "implementer",
-      "model": "sonnet",
-      "tools": ["Read", "Edit", "Write", "Glob", "Grep", "Bash"],
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash"
+      ],
       "responsibilities": "Owns the Python transform layer (extractors, transforms, dagster ops/jobs). Implements the Python side of any pipeline change. Coordinates with schema-analyzer for schema-aware code.",
       "trigger_phrase": "Use when a sub-task touches /transforms/, /ops/, /jobs/, or any .py file under the pipeline source.",
       "stop_criteria": "Python changes pass tests + types, lead messaged.",
       "max_turns": 35,
-      "owns_files": ["transforms/**/*.py", "ops/**/*.py", "jobs/**/*.py", "tests/**/*.py"],
-      "communicates_with": ["pipeline-lead", "schema-analyzer"]
+      "owns_files": [
+        "transforms/**/*.py",
+        "ops/**/*.py",
+        "jobs/**/*.py",
+        "tests/**/*.py"
+      ],
+      "communicates_with": [
+        "pipeline-lead",
+        "schema-analyzer"
+      ]
     },
     {
       "name": "data-quality-reviewer",
       "role": "reviewer",
       "template": "reviewer",
       "model": "opus",
-      "tools": ["Read", "Grep", "Glob", "Bash"],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
       "responsibilities": "Reviews every change for data-quality risks: missing null handling, type drift, broken downstream contracts, unbounded queries, missing dbt tests for new columns. Returns APPROVE / REVISE / BLOCK.",
       "trigger_phrase": "Use after any schema or transform change, before test-runner.",
       "stop_criteria": "Verdict written, lead messaged.",
       "max_turns": 15,
-      "depends_on": ["schema-analyzer", "transform-implementer"],
-      "communicates_with": ["pipeline-lead"]
+      "depends_on": [
+        "schema-analyzer",
+        "transform-implementer"
+      ],
+      "communicates_with": [
+        "pipeline-lead"
+      ]
     },
     {
       "name": "test-runner",
       "role": "verifier",
       "template": "verifier",
-      "model": "sonnet",
-      "tools": ["Read", "Bash"],
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Bash"
+      ],
       "responsibilities": "Runs pytest, mypy, ruff, dbt parse, dbt test. Reports PASS / FAIL with first-failure details. Never runs `dbt run` against production.",
       "trigger_phrase": "Use after data-quality-reviewer APPROVE, before lead declares done.",
       "stop_criteria": "All checks have run, report written, lead messaged.",
       "max_turns": 10,
-      "communicates_with": ["pipeline-lead"]
+      "communicates_with": [
+        "pipeline-lead"
+      ]
     }
   ],
   "quality_gates": [
@@ -77,7 +142,10 @@
       "trigger": "after every implementer/specialist task completion",
       "config": {
         "reviewer": "data-quality-reviewer",
-        "verdicts_requiring_revision": ["REVISE", "BLOCK"]
+        "verdicts_requiring_revision": [
+          "REVISE",
+          "BLOCK"
+        ]
       },
       "max_iterations": 3
     },
@@ -86,7 +154,13 @@
       "trigger": "before declaring done",
       "config": {
         "verifier": "test-runner",
-        "required_pass": ["pytest", "mypy", "ruff", "dbt-parse", "dbt-test"]
+        "required_pass": [
+          "pytest",
+          "mypy",
+          "ruff",
+          "dbt-parse",
+          "dbt-test"
+        ]
       },
       "max_iterations": 3
     }

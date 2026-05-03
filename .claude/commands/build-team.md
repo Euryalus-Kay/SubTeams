@@ -21,7 +21,7 @@ The user's experimental Teams feature is enabled (`CLAUDE_CODE_EXPERIMENTAL_AGEN
 | `--without <comma-list>` | These roles MUST NOT be included. e.g. `--without verifier` (when you have CI handling that) |
 | `--agents <N>` | Force the team size to exactly N (still 3 ≤ N ≤ 7) |
 | `--pattern <name>` | Force the pattern: `orchestrator-worker`, `parallel-sectioning`, `sequential-pipeline`, `evaluator-optimizer`, `router`, `hybrid` |
-| `--model <agent=model,...>` | Override default model per agent. e.g. `--model security-reviewer=opus,test-runner=sonnet` |
+| `--model <agent=model,...>` | Override default model per agent (default for every agent is `opus`). e.g. `--model test-runner=sonnet` to deliberately downgrade one role |
 | `--topology <subagent\|agent-team>` | Force communication topology |
 | `--scratch <dir>` | Override the scratch directory path (default `.claude/.team-builder-scratch`) |
 | `--path <dir>` | Treat this directory as the project root (instead of cwd) |

@@ -42,16 +42,16 @@ Always include a *trigger condition* ("Use when…", "Use proactively after…")
 
 The general-purpose agent gets all tools. Custom agents should be tighter:
 
-| Role | Default tool grant |
-|---|---|
-| Orchestrator | All tools (must include `Agent` for spawning) |
-| Researcher | Read, Grep, Glob, Bash, WebSearch, WebFetch — **never** Write/Edit outside scratch |
-| Implementer | Read, Edit, Write, Glob, Grep, Bash — scoped by `owns_files` |
-| Reviewer | Read, Grep, Glob, Bash — **never** Write/Edit |
-| Verifier | Read, Bash — **never** Write/Edit |
-| Specialist | Whatever the role demands, but explicitly enumerated |
+| Role | Default tool grant | Default model |
+|---|---|---|
+| Orchestrator | All tools (must include `Agent` for spawning) | **opus** |
+| Researcher | Read, Grep, Glob, Bash, WebSearch, WebFetch — **never** Write/Edit outside scratch | **opus** |
+| Implementer | Read, Edit, Write, Glob, Grep, Bash — scoped by `owns_files` | **opus** |
+| Reviewer | Read, Grep, Glob, Bash — **never** Write/Edit | **opus** |
+| Verifier | Read, Bash — **never** Write/Edit | **opus** |
+| Specialist | Whatever the role demands, but explicitly enumerated | **opus** |
 
-Tighter tool sets = fewer ways to fail.
+Tighter tool sets = fewer ways to fail. **Models are always Opus 4.7** — quality is the sole target. Per-agent overrides only via the `--model` flag.
 
 ## 6. File ownership is a first-class concept
 

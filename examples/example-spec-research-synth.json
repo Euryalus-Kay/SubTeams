@@ -12,65 +12,131 @@
       "role": "orchestrator",
       "template": "orchestrator",
       "model": "opus",
-      "tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Agent", "TeamCreate", "TeamDelete", "SendMessage", "TaskCreate", "TaskUpdate", "TaskList", "TodoWrite"],
-      "responsibilities": "Owns the synthesis task. Decomposes the user's question into 2–3 sub-questions, assigns one researcher per sub-question (parallel sectioning), then routes the assembled findings to synthesizer, then to citation-checker. Does not write the synthesis itself.",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Bash",
+        "Agent",
+        "TeamCreate",
+        "TeamDelete",
+        "SendMessage",
+        "TaskCreate",
+        "TaskUpdate",
+        "TaskList",
+        "TodoWrite"
+      ],
+      "responsibilities": "Owns the synthesis task. Decomposes the user's question into 2\u20133 sub-questions, assigns one researcher per sub-question (parallel sectioning), then routes the assembled findings to synthesizer, then to citation-checker. Does not write the synthesis itself.",
       "trigger_phrase": "Use for any question that requires consulting multiple sources and producing a synthesis report.",
       "stop_criteria": "Synthesis report exists at output path, citation-checker has returned PASS, final summary delivered to user.",
       "max_turns": 50,
-      "communicates_with": ["primary-researcher", "secondary-researcher", "synthesizer", "citation-checker"]
+      "communicates_with": [
+        "primary-researcher",
+        "secondary-researcher",
+        "synthesizer",
+        "citation-checker"
+      ]
     },
     {
       "name": "primary-researcher",
       "role": "researcher",
       "template": "researcher",
       "model": "opus",
-      "tools": ["Read", "Grep", "Glob", "Bash", "WebSearch", "WebFetch"],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "WebSearch",
+        "WebFetch"
+      ],
       "responsibilities": "Investigates the most central sub-question. Surveys the project's local corpus + authoritative external sources. Produces a structured findings doc with citations.",
-      "trigger_phrase": "Use for the primary sub-question of a synthesis task — the one carrying the most weight in the final answer.",
+      "trigger_phrase": "Use for the primary sub-question of a synthesis task \u2014 the one carrying the most weight in the final answer.",
       "stop_criteria": "Findings doc written to scratch_dir, summary sent to lead.",
       "max_turns": 35,
-      "owns_files": [".research-scratch/primary-*.md"],
-      "communicates_with": ["synth-lead"]
+      "owns_files": [
+        ".research-scratch/primary-*.md"
+      ],
+      "communicates_with": [
+        "synth-lead"
+      ]
     },
     {
       "name": "secondary-researcher",
       "role": "researcher",
       "template": "researcher",
-      "model": "sonnet",
-      "tools": ["Read", "Grep", "Glob", "Bash", "WebSearch", "WebFetch"],
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "WebSearch",
+        "WebFetch"
+      ],
       "responsibilities": "Investigates supporting sub-questions in parallel with primary-researcher. Same output format. Coordinates with primary to avoid duplicating sources.",
       "trigger_phrase": "Use for secondary or supporting sub-questions that sit alongside the main question.",
       "stop_criteria": "Findings doc written to scratch_dir, summary sent to lead.",
       "max_turns": 30,
-      "owns_files": [".research-scratch/secondary-*.md"],
-      "communicates_with": ["synth-lead", "primary-researcher"]
+      "owns_files": [
+        ".research-scratch/secondary-*.md"
+      ],
+      "communicates_with": [
+        "synth-lead",
+        "primary-researcher"
+      ]
     },
     {
       "name": "synthesizer",
       "role": "specialist",
       "template": "specialist",
       "model": "opus",
-      "tools": ["Read", "Edit", "Write", "Glob", "Grep"],
-      "responsibilities": "Reads all researchers' findings. Writes the final synthesis report — coherent narrative, structured argument, all claims traceable to a researcher's finding. Does not invent claims; pure aggregation + framing.",
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "Glob",
+        "Grep"
+      ],
+      "responsibilities": "Reads all researchers' findings. Writes the final synthesis report \u2014 coherent narrative, structured argument, all claims traceable to a researcher's finding. Does not invent claims; pure aggregation + framing.",
       "trigger_phrase": "Use after all researchers have completed and the lead is ready to assemble the final report.",
       "stop_criteria": "Synthesis report written, summary sent to lead.",
       "max_turns": 25,
-      "owns_files": ["reports/**/*.md"],
-      "depends_on": ["primary-researcher", "secondary-researcher"],
-      "communicates_with": ["synth-lead"]
+      "owns_files": [
+        "reports/**/*.md"
+      ],
+      "depends_on": [
+        "primary-researcher",
+        "secondary-researcher"
+      ],
+      "communicates_with": [
+        "synth-lead"
+      ]
     },
     {
       "name": "citation-checker",
       "role": "reviewer",
       "template": "reviewer",
       "model": "opus",
-      "tools": ["Read", "Grep", "Glob", "Bash", "WebFetch"],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "WebFetch"
+      ],
       "responsibilities": "Reads the synthesis report. For every claim, verifies the cited source actually says what the report claims. Spot-checks 100% of URL citations by fetching them; spot-checks a sample of local-file citations. Returns APPROVE / REVISE / BLOCK with specific defects.",
       "trigger_phrase": "Use after synthesizer produces a draft, before delivering to user.",
       "stop_criteria": "Verdict written, lead messaged.",
       "max_turns": 20,
-      "depends_on": ["synthesizer"],
-      "communicates_with": ["synth-lead"]
+      "depends_on": [
+        "synthesizer"
+      ],
+      "communicates_with": [
+        "synth-lead"
+      ]
     }
   ],
   "quality_gates": [
@@ -79,7 +145,10 @@
       "trigger": "after synthesizer draft",
       "config": {
         "reviewer": "citation-checker",
-        "verdicts_requiring_revision": ["REVISE", "BLOCK"]
+        "verdicts_requiring_revision": [
+          "REVISE",
+          "BLOCK"
+        ]
       },
       "max_iterations": 3
     }

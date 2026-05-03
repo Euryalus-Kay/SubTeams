@@ -12,82 +12,167 @@
       "role": "orchestrator",
       "template": "orchestrator",
       "model": "opus",
-      "tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Agent", "TeamCreate", "TeamDelete", "SendMessage", "TaskCreate", "TaskUpdate", "TaskList", "TodoWrite"],
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Bash",
+        "Agent",
+        "TeamCreate",
+        "TeamDelete",
+        "SendMessage",
+        "TaskCreate",
+        "TaskUpdate",
+        "TaskList",
+        "TodoWrite"
+      ],
       "responsibilities": "Owns the user task end-to-end. Decomposes features into frontend / API / DB sub-tasks, assigns to the right implementer, runs the security-reviewer after every implementer completion, runs the test-runner before declaring done. Synthesizes the final summary. Does not edit code itself.",
       "trigger_phrase": "Use for any user-facing feature request, bug fix, or refactor that spans more than one layer of the SaaS stack.",
       "stop_criteria": "All sub-tasks marked complete in TaskList, security-reviewer returns APPROVE, test-runner returns PASS, and a final summary has been delivered to the user.",
       "max_turns": 60,
-      "communicates_with": ["frontend-implementer", "api-implementer", "db-implementer", "security-reviewer", "test-runner"]
+      "communicates_with": [
+        "frontend-implementer",
+        "api-implementer",
+        "db-implementer",
+        "security-reviewer",
+        "test-runner"
+      ]
     },
     {
       "name": "frontend-implementer",
       "role": "implementer",
       "template": "implementer",
-      "model": "sonnet",
-      "tools": ["Read", "Edit", "Write", "Glob", "Grep", "Bash"],
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash"
+      ],
       "responsibilities": "Owns the Next.js app router, React components, and client-side state. Implements UI changes assigned by the lead. Matches existing Tailwind + shadcn/ui patterns. Updates component tests when behavior changes.",
       "trigger_phrase": "Use when a sub-task touches /app/, /components/, /lib/client/, /styles/, or any .tsx/.ts file outside /app/api/.",
       "stop_criteria": "All assigned files compile, component tests pass, lead has been messaged with files-changed list.",
       "max_turns": 40,
-      "owns_files": ["app/**/page.tsx", "app/**/layout.tsx", "components/**/*", "lib/client/**/*", "styles/**/*"],
+      "owns_files": [
+        "app/**/page.tsx",
+        "app/**/layout.tsx",
+        "components/**/*",
+        "lib/client/**/*",
+        "styles/**/*"
+      ],
       "depends_on": [],
-      "communicates_with": ["feature-lead", "api-implementer"]
+      "communicates_with": [
+        "feature-lead",
+        "api-implementer"
+      ]
     },
     {
       "name": "api-implementer",
       "role": "implementer",
       "template": "implementer",
-      "model": "sonnet",
-      "tools": ["Read", "Edit", "Write", "Glob", "Grep", "Bash"],
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash"
+      ],
       "responsibilities": "Owns Next.js API routes, request validation (Zod), auth middleware, and server-side business logic. Coordinates with db-implementer for any new DB calls. Updates API tests when contract changes.",
       "trigger_phrase": "Use when a sub-task touches /app/api/, /lib/server/, /middleware.ts, or any auth/session logic.",
       "stop_criteria": "All assigned routes return correct responses, integration tests pass, lead has been messaged.",
       "max_turns": 40,
-      "owns_files": ["app/api/**/*", "lib/server/**/*", "middleware.ts"],
-      "depends_on": ["db-implementer"],
-      "communicates_with": ["feature-lead", "frontend-implementer", "db-implementer"]
+      "owns_files": [
+        "app/api/**/*",
+        "lib/server/**/*",
+        "middleware.ts"
+      ],
+      "depends_on": [
+        "db-implementer"
+      ],
+      "communicates_with": [
+        "feature-lead",
+        "frontend-implementer",
+        "db-implementer"
+      ]
     },
     {
       "name": "db-implementer",
       "role": "implementer",
       "template": "implementer",
-      "model": "sonnet",
-      "tools": ["Read", "Edit", "Write", "Glob", "Grep", "Bash"],
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash"
+      ],
       "responsibilities": "Owns the Drizzle schema, migrations, and DB query helpers. Generates and reviews migrations. Never runs migrations without explicit user confirmation. Updates schema tests when shape changes.",
       "trigger_phrase": "Use when a sub-task requires a schema change, new query helper, new migration, or any change under /db/.",
       "stop_criteria": "Schema changes compile, migration is generated and inspected (not applied), schema tests pass, lead has been messaged.",
       "max_turns": 30,
-      "owns_files": ["db/**/*", "drizzle.config.ts"],
+      "owns_files": [
+        "db/**/*",
+        "drizzle.config.ts"
+      ],
       "depends_on": [],
-      "communicates_with": ["feature-lead", "api-implementer"]
+      "communicates_with": [
+        "feature-lead",
+        "api-implementer"
+      ]
     },
     {
       "name": "security-reviewer",
       "role": "reviewer",
       "template": "reviewer",
       "model": "opus",
-      "tools": ["Read", "Grep", "Glob", "Bash"],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
       "responsibilities": "Reads every diff after an implementer reports done. Applies the OWASP top-10 lens: input validation, authn/authz checks, SQL injection, XSS, secret leaks, insecure session handling. Returns APPROVE / REVISE / BLOCK with file:line citations.",
       "trigger_phrase": "Use after every implementer reports a sub-task complete, especially for changes touching /api/, /db/, or auth.",
       "stop_criteria": "Verdict and report written to .claude/.team-builder-scratch/security-reviewer-<task>.md, lead messaged with verdict.",
       "max_turns": 15,
       "owns_files": [],
-      "depends_on": ["frontend-implementer", "api-implementer", "db-implementer"],
-      "communicates_with": ["feature-lead"]
+      "depends_on": [
+        "frontend-implementer",
+        "api-implementer",
+        "db-implementer"
+      ],
+      "communicates_with": [
+        "feature-lead"
+      ]
     },
     {
       "name": "test-runner",
       "role": "verifier",
       "template": "verifier",
-      "model": "sonnet",
-      "tools": ["Read", "Bash"],
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Bash"
+      ],
       "responsibilities": "Runs the project's test suite (vitest), linter (eslint), type-checker (tsc --noEmit), and build (next build). Reports PASS / FAIL with first-failure details. Does not modify any file.",
       "trigger_phrase": "Use after security-reviewer returns APPROVE, before lead declares the user task done.",
       "stop_criteria": "All four checks have run, report written, lead messaged with PASS / FAIL.",
       "max_turns": 10,
       "owns_files": [],
-      "depends_on": ["security-reviewer"],
-      "communicates_with": ["feature-lead"]
+      "depends_on": [
+        "security-reviewer"
+      ],
+      "communicates_with": [
+        "feature-lead"
+      ]
     }
   ],
   "quality_gates": [
@@ -96,7 +181,10 @@
       "trigger": "after every implementer task completion",
       "config": {
         "reviewer": "security-reviewer",
-        "verdicts_requiring_revision": ["REVISE", "BLOCK"]
+        "verdicts_requiring_revision": [
+          "REVISE",
+          "BLOCK"
+        ]
       },
       "max_iterations": 3
     },
@@ -105,13 +193,18 @@
       "trigger": "before lead declares user task done",
       "config": {
         "verifier": "test-runner",
-        "required_pass": ["tests", "lint", "types", "build"]
+        "required_pass": [
+          "tests",
+          "lint",
+          "types",
+          "build"
+        ]
       },
       "max_iterations": 3
     }
   ],
   "shared_context": {
-    "claude_md_additions": "## SaaS feature team\n\n6-agent team designed by SubTeams (orchestrator-worker pattern, agent-team topology).\n- `feature-lead` (opus) coordinates\n- `frontend-implementer`, `api-implementer`, `db-implementer` (sonnet) own non-overlapping file globs\n- `security-reviewer` (opus, read-only) gates every diff\n- `test-runner` (sonnet, read-only + Bash) gates the final ship\n\nRun a feature: `/run-team add 2FA to login`\nAudit the team: `/review-team`\nRebuild after major refactor: `/build-team`\n",
+    "claude_md_additions": "## SaaS feature team\n\n6-agent team designed by SubTeams (orchestrator-worker pattern, agent-team topology).\n- `feature-lead` (opus) coordinates\n- `frontend-implementer`, `api-implementer`, `db-implementer` (opus) own non-overlapping file globs\n- `security-reviewer` (opus, read-only) gates every diff\n- `test-runner` (opus, read-only + Bash) gates the final ship\n\nRun a feature: `/run-team add 2FA to login`\nAudit the team: `/review-team`\nRebuild after major refactor: `/build-team`\n",
     "scratch_dir": ".claude/.team-builder-scratch"
   }
 }
