@@ -2,48 +2,73 @@
 # install.sh — install SubTeams.
 #
 # Usage:
-#   ./install.sh <path-to-target-project>     # project install
-#   ./install.sh --global                     # user-level install (every Claude Code chat)
+#   ./install.sh <path-to-target-project>            # project install
+#   ./install.sh --global                            # user-level install
+#   ./install.sh --global --force                    # overwrite existing files
+#   ./install.sh <path> --force                      # same, in project mode
 #
-# Project install writes to <target>/.claude/ and <target>/.subteams/.
-# Global install writes to ~/.claude/ and ~/.claude/.subteams/.
+# Without --force, existing meta-agent and command files are SKIPPED
+# (preserves any local edits). With --force, they are OVERWRITTEN with
+# the SubTeams source — use after `git pull` to refresh.
 #
-# Either mode adds:
-#   .claude/agents/{practice-researcher,project-analyzer,team-architect,team-qa-reviewer}.md
-#   .claude/commands/{build-team,run-team,review-team}.md
-#   .claude/skills/team-builder/SKILL.md
-#   .subteams/templates/   (the agent templates the generator uses)
-#   .subteams/docs/        (QA rubric and reference docs)
+# Templates, docs, and dashboard are always overwritten (they are reference
+# assets, not edited in place).
 #
 # It does NOT touch:
-#   .claude/agents/<existing-team-stuff>.md (skipped if already present)
+#   .claude/agents/<your-team>.md (only skipped if matching name; still safe)
 #   CLAUDE.md
 #   anything else outside the .claude/ paths it owns
 
 set -euo pipefail
 
-if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <path-to-target-project>" >&2
-  echo "       $0 --global" >&2
+# Parse flags (order-independent)
+FORCE=0
+MODE=""
+TARGET=""
+for arg in "$@"; do
+  case "$arg" in
+    --force)
+      FORCE=1
+      ;;
+    --global)
+      MODE="global"
+      ;;
+    --*)
+      echo "Error: unknown flag: $arg" >&2
+      exit 1
+      ;;
+    *)
+      if [[ -z "$TARGET" ]]; then
+        TARGET="$arg"
+      else
+        echo "Error: multiple paths given: '$TARGET' and '$arg'" >&2
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+if [[ -z "$MODE" && -z "$TARGET" ]]; then
+  echo "Usage: $0 <path-to-target-project> [--force]" >&2
+  echo "       $0 --global [--force]" >&2
   exit 1
 fi
 
 SOURCE="$(cd "$(dirname "$0")" && pwd)"
 
-if [[ "$1" == "--global" ]]; then
-  MODE="global"
+if [[ "$MODE" == "global" ]]; then
   TARGET="$HOME/.claude"
   SUBTEAMS_DIR="$HOME/.claude/.subteams"
-  echo "Installing SubTeams GLOBALLY (user-level): $TARGET"
+  echo "Installing SubTeams GLOBALLY (user-level): $TARGET${FORCE:+ (force=on)}"
+  if [[ $FORCE -eq 1 ]]; then echo "  --force: existing meta-agent and command files will be OVERWRITTEN"; fi
 else
   MODE="project"
-  TARGET="$1"
   SUBTEAMS_DIR="$TARGET/.subteams"
   if [[ ! -d "$TARGET" ]]; then
     echo "Error: target directory does not exist: $TARGET" >&2
     exit 1
   fi
-  echo "Installing SubTeams into project: $TARGET"
+  echo "Installing SubTeams into project: $TARGET${FORCE:+ (force=on)}"
 fi
 
 echo "  Source: $SOURCE"
@@ -72,21 +97,29 @@ mkdir -p "$SUBTEAMS_DIR/docs"
 
 # Copy meta-agents
 for f in practice-researcher project-analyzer team-architect team-qa-reviewer; do
-  if [[ -f "$AGENTS_DIR/$f.md" ]]; then
-    echo "  SKIP existing: $AGENTS_DIR/$f.md"
+  if [[ -f "$AGENTS_DIR/$f.md" && $FORCE -eq 0 ]]; then
+    echo "  SKIP existing: $AGENTS_DIR/$f.md (use --force to overwrite)"
   else
     cp "$SOURCE/.claude/agents/$f.md" "$AGENTS_DIR/$f.md"
-    echo "  + $AGENTS_DIR/$f.md"
+    if [[ $FORCE -eq 1 && -f "$AGENTS_DIR/$f.md" ]]; then
+      echo "  ! overwrote: $AGENTS_DIR/$f.md"
+    else
+      echo "  + $AGENTS_DIR/$f.md"
+    fi
   fi
 done
 
 # Copy commands. run-team is generic — it reads TEAM_SPEC.json at runtime.
 for f in build-team run-team review-team team-status team-dashboard team-info; do
-  if [[ -f "$COMMANDS_DIR/$f.md" ]]; then
-    echo "  SKIP existing: $COMMANDS_DIR/$f.md"
+  if [[ -f "$COMMANDS_DIR/$f.md" && $FORCE -eq 0 ]]; then
+    echo "  SKIP existing: $COMMANDS_DIR/$f.md (use --force to overwrite)"
   else
     cp "$SOURCE/.claude/commands/$f.md" "$COMMANDS_DIR/$f.md"
-    echo "  + $COMMANDS_DIR/$f.md"
+    if [[ $FORCE -eq 1 ]]; then
+      echo "  ! overwrote: $COMMANDS_DIR/$f.md"
+    else
+      echo "  + $COMMANDS_DIR/$f.md"
+    fi
   fi
 done
 
