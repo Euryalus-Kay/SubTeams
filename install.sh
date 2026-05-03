@@ -81,7 +81,7 @@ for f in practice-researcher project-analyzer team-architect team-qa-reviewer; d
 done
 
 # Copy commands. run-team is generic — it reads TEAM_SPEC.json at runtime.
-for f in build-team run-team review-team team-status team-dashboard; do
+for f in build-team run-team review-team team-status team-dashboard team-info; do
   if [[ -f "$COMMANDS_DIR/$f.md" ]]; then
     echo "  SKIP existing: $COMMANDS_DIR/$f.md"
   else
@@ -138,7 +138,7 @@ echo ""
 if [[ "$MODE" == "global" ]]; then
   echo "Available in EVERY Claude Code chat on this machine:"
   echo "  /build-team    /run-team    /review-team"
-  echo "  /team-status   /team-dashboard"
+  echo "  /team-status   /team-dashboard   /team-info"
   echo ""
   echo "Templates and docs the meta-agents reference live at:"
   echo "  $SUBTEAMS_DIR/"

@@ -70,6 +70,9 @@ def get_state() -> dict:
                     t["_filename"] = tf.name
                     tasks.append(t)
 
+            cfg_mtime = cfg_path.stat().st_mtime
+            task_mtimes = [t.get("_mtime", 0) for t in tasks]
+            last_activity = max([cfg_mtime, *task_mtimes]) if task_mtimes else cfg_mtime
             teams.append({
                 "name": team_dir.name,
                 "config": cfg,
@@ -78,8 +81,12 @@ def get_state() -> dict:
                 "completed": sum(1 for t in tasks if str(t.get("status", "")).lower() == "completed"),
                 "in_progress": sum(1 for t in tasks if str(t.get("status", "")).lower() in ("in_progress", "in-progress", "active")),
                 "blocked": sum(1 for t in tasks if str(t.get("status", "")).lower() == "blocked"),
-                "config_mtime": cfg_path.stat().st_mtime,
+                "pending": sum(1 for t in tasks if str(t.get("status", "")).lower() == "pending"),
+                "config_mtime": cfg_mtime,
+                "last_activity": last_activity,
             })
+
+    teams.sort(key=lambda t: -t["last_activity"])
 
     activity = []
     for d in WATCH_DIRS:
