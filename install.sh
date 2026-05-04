@@ -18,6 +18,13 @@
 #   .claude/agents/<your-team>.md (only skipped if matching name; still safe)
 #   CLAUDE.md
 #   anything else outside the .claude/ paths it owns
+#
+# Scope: only the 4 meta-agents (practice-researcher, project-analyzer,
+# team-architect, team-qa-reviewer) and 6 user-facing commands ship to other
+# projects. The SubTeams maintenance team — subteams-maintenance-lead,
+# prompt-engineer, schema-keeper, docs-writer, production-verifier — exists
+# only to maintain THIS repo and is intentionally excluded from install.sh.
+# If you add a new meta-agent or command, update the for-loops below.
 
 set -euo pipefail
 
@@ -97,11 +104,13 @@ mkdir -p "$SUBTEAMS_DIR/docs"
 
 # Copy meta-agents
 for f in practice-researcher project-analyzer team-architect team-qa-reviewer; do
-  if [[ -f "$AGENTS_DIR/$f.md" && $FORCE -eq 0 ]]; then
+  existed=0
+  [[ -f "$AGENTS_DIR/$f.md" ]] && existed=1
+  if [[ $existed -eq 1 && $FORCE -eq 0 ]]; then
     echo "  SKIP existing: $AGENTS_DIR/$f.md (use --force to overwrite)"
   else
     cp "$SOURCE/.claude/agents/$f.md" "$AGENTS_DIR/$f.md"
-    if [[ $FORCE -eq 1 && -f "$AGENTS_DIR/$f.md" ]]; then
+    if [[ $existed -eq 1 ]]; then
       echo "  ! overwrote: $AGENTS_DIR/$f.md"
     else
       echo "  + $AGENTS_DIR/$f.md"
@@ -111,11 +120,13 @@ done
 
 # Copy commands. run-team is generic — it reads TEAM_SPEC.json at runtime.
 for f in build-team run-team review-team team-status team-dashboard team-info; do
-  if [[ -f "$COMMANDS_DIR/$f.md" && $FORCE -eq 0 ]]; then
+  existed=0
+  [[ -f "$COMMANDS_DIR/$f.md" ]] && existed=1
+  if [[ $existed -eq 1 && $FORCE -eq 0 ]]; then
     echo "  SKIP existing: $COMMANDS_DIR/$f.md (use --force to overwrite)"
   else
     cp "$SOURCE/.claude/commands/$f.md" "$COMMANDS_DIR/$f.md"
-    if [[ $FORCE -eq 1 ]]; then
+    if [[ $existed -eq 1 ]]; then
       echo "  ! overwrote: $COMMANDS_DIR/$f.md"
     else
       echo "  + $COMMANDS_DIR/$f.md"
@@ -144,25 +155,76 @@ cp "$SOURCE/dashboard/index.html" "$SUBTEAMS_DIR/dashboard/index.html"
 chmod +x "$SUBTEAMS_DIR/dashboard/server.py"
 echo "  + $SUBTEAMS_DIR/dashboard/ (server.py, index.html)"
 
-# Settings: enable Agent Teams flag if not already present
-if [[ -f "$SETTINGS_PATH" ]]; then
-  if grep -q "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" "$SETTINGS_PATH"; then
-    echo "  = $SETTINGS_PATH (Agent Teams flag already present)"
-  else
-    echo "  ! $SETTINGS_PATH exists but does not enable Agent Teams."
-    echo "    Add this to its env block:"
-    echo '      "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"'
-  fi
-else
-  cat > "$SETTINGS_PATH" <<'EOF'
-{
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  }
-}
-EOF
-  echo "  + $SETTINGS_PATH"
-fi
+# Settings: MERGE the Agent Teams flag AND the permissions block into the
+# existing file (or create it if absent). Both are required — the env flag
+# alone leaves spawned teammates blocking on every Bash/Edit call. See:
+#   https://github.com/anthropics/claude-code/issues/26479
+#
+# We use python3 (preinstalled on macOS and most Linux) for a structural JSON
+# merge. The previous version used `grep -q` to bail if the env flag was
+# present, which silently left files without a permissions block — the most
+# common cause of the "subagent prompts the parent that never sees them" bug.
+REQUIRED_ALLOW='["Bash(*)","Read(*)","Write(*)","Edit(*)","Glob(*)","Grep(*)","WebSearch","WebFetch(*)","Agent(*)","TeamCreate(*)","TeamDelete(*)","SendMessage(*)","TaskCreate(*)","TaskUpdate(*)","TaskList(*)","TodoWrite"]'
+
+python3 - "$SETTINGS_PATH" "$REQUIRED_ALLOW" <<'PY'
+import json, os, sys
+path, required_allow_json = sys.argv[1], sys.argv[2]
+required_allow = json.loads(required_allow_json)
+
+if os.path.exists(path):
+    with open(path) as f:
+        try:
+            cfg = json.load(f)
+            if not isinstance(cfg, dict):
+                raise ValueError("top-level not an object")
+        except Exception as e:
+            print(f"  ! {path} is not valid JSON ({e}); leaving untouched. Fix it and re-run install.")
+            sys.exit(0)
+    created = False
+else:
+    cfg = {}
+    created = True
+
+changed = False
+
+# 1. env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"
+env = cfg.setdefault("env", {})
+if env.get("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS") != "1":
+    env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
+    changed = True
+
+# 2. permissions.defaultMode = "bypassPermissions" (only set if missing — we
+#    don't downgrade a stricter user choice without telling them).
+perms = cfg.setdefault("permissions", {})
+if "defaultMode" not in perms:
+    perms["defaultMode"] = "bypassPermissions"
+    changed = True
+elif perms["defaultMode"] not in ("bypassPermissions", "acceptEdits"):
+    print(f"  ! {path} has permissions.defaultMode = {perms['defaultMode']!r}.")
+    print(f"    SubTeams needs 'bypassPermissions' so spawned teammates do not block on every Bash/Edit.")
+    print(f"    Leaving your setting alone. Either change it manually or rename this file and re-run install.")
+
+# 3. permissions.allow — union with required entries, preserve existing.
+existing_allow = perms.get("allow")
+if not isinstance(existing_allow, list):
+    existing_allow = []
+existing_set = set(existing_allow)
+added = [x for x in required_allow if x not in existing_set]
+if added:
+    perms["allow"] = existing_allow + added
+    changed = True
+
+if changed or created:
+    with open(path, "w") as f:
+        json.dump(cfg, f, indent=2)
+        f.write("\n")
+    if created:
+        print(f"  + {path} (Agent Teams flag + bypassPermissions + allowlist)")
+    else:
+        print(f"  ~ {path} (merged Agent Teams flag / permissions; preserved your other keys)")
+else:
+    print(f"  = {path} (already configured)")
+PY
 
 echo ""
 echo "SubTeams installed ($MODE)."

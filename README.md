@@ -10,7 +10,7 @@ You give SubTeams a project (or no input at all — it'll read your current dire
 4. **Generate** the working agent files into your project
 5. **Quality-review** the result against a rubric, looping until it passes
 
-You end up with a ready-to-use team and three slash commands: `/build-team`, `/run-team`, `/review-team`.
+You end up with a ready-to-use team and six slash commands: `/build-team`, `/run-team`, `/review-team`, `/team-status`, `/team-dashboard`, `/team-info`.
 
 Quality is the only optimization target. Every meta-agent runs Opus 4.7. The user has explicitly opted out of cost and speed concerns.
 
@@ -40,20 +40,61 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full picture, [docs/PAT
 
 ---
 
+## The two teams in `.claude/agents/`
+
+Nine agent files live in `.claude/agents/` — they belong to **two different teams** with disjoint jobs. Only one of them ships to other projects.
+
+### Meta-team (4 agents) — builds *generated teams* in any project
+
+These are invoked by `/build-team` and shipped to every project by `install.sh`.
+
+| Agent | Role |
+|---|---|
+| `practice-researcher` | WebSearch + WebFetch, cites Anthropic guidance |
+| `project-analyzer` | reads codebase, finds work partitions |
+| `team-architect` | synthesizes `TEAM_SPEC.json` |
+| `team-qa-reviewer` | audits against `docs/QA-RUBRIC.md` |
+
+### Maintenance team (5 agents) — maintains *this repo only*
+
+These exist to keep SubTeams itself healthy as Anthropic publishes new guidance and the schema/templates evolve. They are intentionally **excluded from `install.sh`** — they do not ship to other projects.
+
+| Agent | Owns |
+|---|---|
+| `subteams-maintenance-lead` | orchestrator — receives a maintenance task, decomposes, delegates, runs gates |
+| `prompt-engineer` | `.claude/agents/`, `.claude/commands/`, `templates/*.md.template`, `.claude/skills/team-builder/SKILL.md` |
+| `schema-keeper` | `templates/team-spec.schema.json`, `examples/*.json`, `docs/QA-RUBRIC.md`, `install.sh` |
+| `docs-writer` | `README.md`, `docs/{ARCHITECTURE,PATTERNS,DESIGN-PRINCIPLES,INSTALLATION}.md`, `dashboard/server.py`, `dashboard/index.html` |
+| `production-verifier` | runs the smoke battery before any maintenance task is declared done |
+
+If you fork SubTeams to evolve it, the maintenance team is the team you'll run. If you only consume SubTeams, you'll never see them — `install.sh` ships only the meta-team and the six commands.
+
+---
+
 ## Prerequisites
 
 - **Claude Code** v2.1.32 or later (the version that introduced experimental Agent Teams)
 - **Opus 4.7** access on your Claude account
-- Experimental Agent Teams enabled in `~/.claude/settings.json`:
+- Experimental Agent Teams enabled AND a permissions block in `~/.claude/settings.json`:
   ```json
   {
     "env": {
       "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    },
+    "permissions": {
+      "defaultMode": "bypassPermissions",
+      "allow": [
+        "Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "Glob(*)", "Grep(*)",
+        "WebSearch", "WebFetch(*)", "Agent(*)", "TeamCreate(*)", "TeamDelete(*)",
+        "SendMessage(*)", "TaskCreate(*)", "TaskUpdate(*)", "TaskList(*)", "TodoWrite"
+      ]
     }
   }
   ```
 
-The repo's `.claude/settings.json` already has this flag — but it only applies when Claude Code is run *inside this repo*. To use SubTeams on other projects, set the flag globally too.
+  **Both pieces are required.** The env flag turns Agent Teams on; the permissions block keeps spawned teammates from blocking on permission prompts that the parent session never sees. Teammates do NOT inherit `settings.local.json`, only `settings.json` — see [claude-code#26479](https://github.com/anthropics/claude-code/issues/26479). Running `./install.sh --global` writes both blocks for you and merges into existing files instead of overwriting them.
+
+The repo's `.claude/settings.json` already has this — but it only applies when Claude Code is run *inside this repo*. To use SubTeams on other projects, run `./install.sh --global` so your `~/.claude/settings.json` has the same blocks.
 
 ---
 
@@ -73,7 +114,7 @@ git clone https://github.com/Euryalus-Kay/SubTeams.git ~/SubTeams
 ~/SubTeams/install.sh --global
 ```
 
-This installs into `~/.claude/agents/`, `~/.claude/commands/`, and `~/.claude/.subteams/`. After this, `/build-team`, `/run-team`, and `/review-team` are available in any project — no per-project setup needed.
+This installs into `~/.claude/agents/`, `~/.claude/commands/`, and `~/.claude/.subteams/`. After this, all six commands — `/build-team`, `/run-team`, `/review-team`, `/team-status`, `/team-dashboard`, `/team-info` — are available in any project, no per-project setup needed.
 
 **Option B — Per project (just this one):**
 
@@ -171,18 +212,29 @@ See [examples/](examples/) for three complete TEAM_SPEC examples (SaaS, research
 ```
 SubTeams/
 ├── README.md                           ← this file
-├── install.sh                          ← installer script
+├── CLAUDE.md                           ← repo-level Claude Code instructions
+├── EVALUATION_PROPOSAL.md              ← proposed evaluation methodology for SubTeams
+├── LICENSE                             ← MIT
+├── install.sh                          ← installer script (--global or per-project)
 ├── .claude/
 │   ├── settings.json                   ← enables CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 │   ├── commands/
 │   │   ├── build-team.md               ← /build-team — meta-orchestrator
 │   │   ├── run-team.md                 ← /run-team — runtime supervisor
-│   │   └── review-team.md              ← /review-team — audit existing team
-│   ├── agents/                         ← META-AGENTS (used to BUILD teams)
-│   │   ├── practice-researcher.md      ← Opus, WebSearch + WebFetch
-│   │   ├── project-analyzer.md         ← Opus, reads codebase
-│   │   ├── team-architect.md           ← Opus, synthesizes TEAM_SPEC
-│   │   └── team-qa-reviewer.md         ← Opus, applies QA rubric
+│   │   ├── review-team.md              ← /review-team — audit existing team
+│   │   ├── team-status.md              ← /team-status — text summary of running teams
+│   │   ├── team-dashboard.md           ← /team-dashboard — open the live browser dashboard
+│   │   └── team-info.md                ← /team-info — detailed inspector for one team
+│   ├── agents/                         ← TWO TEAMS LIVE HERE (see "The two teams" below)
+│   │   ├── practice-researcher.md      ← meta-team, Opus, WebSearch + WebFetch
+│   │   ├── project-analyzer.md         ← meta-team, Opus, reads codebase
+│   │   ├── team-architect.md           ← meta-team, Opus, synthesizes TEAM_SPEC
+│   │   ├── team-qa-reviewer.md         ← meta-team, Opus, applies QA rubric
+│   │   ├── subteams-maintenance-lead.md ← maintenance-team lead, Opus, orchestrates repo upkeep
+│   │   ├── prompt-engineer.md          ← maintenance-team, owns .claude/agents + commands + templates + SKILL.md
+│   │   ├── schema-keeper.md            ← maintenance-team, owns schema + examples + QA-RUBRIC.md + install.sh
+│   │   ├── docs-writer.md              ← maintenance-team, owns README + docs/ + dashboard/
+│   │   └── production-verifier.md      ← maintenance-team, runs smoke battery before declaring tasks done
 │   └── skills/
 │       └── team-builder/
 │           └── SKILL.md                ← compact reference, loaded by build-team
@@ -194,12 +246,16 @@ SubTeams/
 │   ├── reviewer.md.template
 │   ├── verifier.md.template
 │   └── specialist.md.template
+├── dashboard/                          ← local-only HTTP dashboard (stdlib + vanilla JS)
+│   ├── server.py                       ← Python stdlib HTTP server, /api/state + /api/file
+│   └── index.html                      ← single-file UI, polls /api/state every 2s
 ├── docs/
 │   ├── ARCHITECTURE.md                 ← how the two-level system works
 │   ├── PATTERNS.md                     ← the 6 patterns + when to pick each
 │   ├── DESIGN-PRINCIPLES.md            ← 12 rules every generated team follows
 │   ├── QA-RUBRIC.md                    ← canonical checklist
-│   └── INSTALLATION.md                 ← step-by-step setup
+│   ├── INSTALLATION.md                 ← step-by-step setup
+│   └── HOW-IT-WORKS.pdf                ← visual walkthrough of the two-level architecture
 └── examples/
     ├── example-spec-saas-app.json
     ├── example-spec-research-synth.json
@@ -269,13 +325,17 @@ git clone https://github.com/Euryalus-Kay/SubTeams.git ~/SubTeams
 /build-team           ← designs and generates the team
 /run-team <task>      ← runs the team on a task
 /review-team          ← audits the team later
+/team-status          ← text summary of running teams
+/team-dashboard       ← open the live browser dashboard
+/team-info <team>     ← detailed inspector for one team
 ```
 
 To pull updates to SubTeams later:
 
 ```sh
 cd ~/SubTeams && git pull
-~/SubTeams/install.sh /path/to/your/project   # re-runs to refresh meta-agents (existing files are skipped)
+~/SubTeams/install.sh /path/to/your/project           # skips existing files (preserves edits)
+~/SubTeams/install.sh /path/to/your/project --force   # overwrites with the latest source
 ```
 
 ---
@@ -297,6 +357,9 @@ After editing, re-run `/build-team` to regenerate, or `/review-team` to audit th
 
 **`/build-team` says `TeamCreate` is not available**
 You haven't enabled `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` globally, or your Claude Code version is too old. Check `~/.claude/settings.json` and run `claude --version`.
+
+**Sub-agents seem stuck — they keep "asking for permissions" but I never see a prompt**
+This is the symptom of the [claude-code#26479](https://github.com/anthropics/claude-code/issues/26479) bug: Agent Teams teammates do NOT inherit `settings.local.json`, and the `mode: "bypassPermissions"` parameter on the spawn call alone isn't enough. The fix is to ensure your project's `.claude/settings.json` (and your global `~/.claude/settings.json`) has both `permissions.defaultMode: "bypassPermissions"` AND a wide `permissions.allow` list. Re-run `./install.sh --global` from the SubTeams repo — the installer now merges those blocks into existing settings files (older versions silently skipped if the env flag was already present, which is what left most users without the permissions block).
 
 **The generated team has the wrong number of agents**
 Re-run `/build-team` and explicitly pass guidance: `/build-team this is a small library, use 3 agents only`. Or hand-edit `TEAM_SPEC.json` and re-generate by editing the agent files manually (the spec is the source of truth — the QA rubric checks they match).

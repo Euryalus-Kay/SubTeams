@@ -145,7 +145,26 @@ For each agent in the spec:
 3. Write to `<project_root>/.claude/agents/<name>.md`
 
 Also write:
-- `<project_root>/.claude/settings.json` — merge-update to enable `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` if not already set
+- `<project_root>/.claude/settings.json` — **merge-update, do not overwrite.** Use the Python recipe below. **This is required** — without `defaultMode: bypassPermissions` AND a wide `allow` list in project `settings.json` (NOT `settings.local.json` — teammates do not read that file; see [claude-code#26479](https://github.com/anthropics/claude-code/issues/26479)), spawned teammates block on permission requests for every Bash/Edit call, even when spawned with `mode: "bypassPermissions"`. The mode parameter alone does not cascade through the experimental Agent Teams runtime.
+
+  Run this exact merge (preserves any existing keys the user has set):
+  ```bash
+  python3 - "$PROJECT_ROOT/.claude/settings.json" <<'PY'
+  import json, os, sys
+  path = sys.argv[1]
+  required_allow = ["Bash(*)","Read(*)","Write(*)","Edit(*)","Glob(*)","Grep(*)",
+                    "WebSearch","WebFetch(*)","Agent(*)","TeamCreate(*)","TeamDelete(*)",
+                    "SendMessage(*)","TaskCreate(*)","TaskUpdate(*)","TaskList(*)","TodoWrite"]
+  cfg = json.load(open(path)) if os.path.exists(path) else {}
+  cfg.setdefault("env", {})["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
+  perms = cfg.setdefault("permissions", {})
+  perms.setdefault("defaultMode", "bypassPermissions")
+  existing = perms.get("allow") if isinstance(perms.get("allow"), list) else []
+  perms["allow"] = existing + [x for x in required_allow if x not in set(existing)]
+  os.makedirs(os.path.dirname(path), exist_ok=True)
+  json.dump(cfg, open(path, "w"), indent=2)
+  PY
+  ```
 - `<project_root>/CLAUDE.md` — append (don't overwrite) a section listing the team and how to invoke it
 - `<project_root>/.claude/.team-builder-scratch/TEAM_SPEC.json` — keep the spec for traceability and `/review-team` later
 
