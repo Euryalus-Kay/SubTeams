@@ -13,6 +13,8 @@ venv/
 .claude/cache/
 .claude/sessions/
 .claude/projects/
+.claude/.team-builder-scratch/
+.claude/settings.local.json
 
 generated-teams/
 *.log

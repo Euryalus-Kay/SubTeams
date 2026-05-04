@@ -79,8 +79,8 @@
         },
         "scratch_dir": {
           "type": "string",
-          "pattern": "^\\.claude/[a-z0-9._-]+/?$",
-          "description": "Where teammates write intermediate artifacts so they don't pipe large outputs through the lead"
+          "pattern": "^\\.[a-z0-9][a-z0-9._/-]*[a-z0-9]$",
+          "description": "Where teammates write intermediate artifacts so they don't pipe large outputs through the lead. Must be a hidden directory (start with .). Common patterns: .claude/.team-builder-scratch, .research-scratch, .scratch."
         }
       }
     }

@@ -52,6 +52,7 @@ For every file in `.claude/agents/`:
 | C3 | Reviewer agents do **not** have `Write` or `Edit` in their tool list | Critical |
 | C4 | Verifier agents do **not** have `Write` or `Edit` in their tool list | Critical |
 | C5 | Researchers do not write outside `shared_context.scratch_dir` (verified by inspection of the body) | Warning |
+| C5a | `shared_context.scratch_dir` is a hidden directory (starts with `.`) and matches the schema pattern (`^\.[a-z0-9][a-z0-9._/-]*[a-z0-9]$`). Any hidden path is acceptable — e.g. `.claude/.team-builder-scratch`, `.research-scratch`, `.scratch` | Critical |
 | C6 | Every implementer has a non-empty `owns_files` list | Critical |
 | C7 | No two implementers' `owns_files` globs overlap (string-equality check on patterns; lexical overlap is a Warning) | Critical |
 | C8 | Every agent file has a "Hard rules" section preventing destructive actions without user confirmation | Warning |

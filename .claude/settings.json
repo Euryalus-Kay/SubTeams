@@ -4,16 +4,19 @@
     "CLAUDE_CODE_FORK_SUBAGENT": "0"
   },
   "permissions": {
+    "defaultMode": "bypassPermissions",
+    "additionalDirectories": [
+      "/Users/zainzaidi/Desktop/Sub Teams",
+      "/Users/zainzaidi/Desktop/Sub Teams/.claude/.team-builder-scratch",
+      "/tmp"
+    ],
     "allow": [
-      "Bash(git status:*)",
-      "Bash(git diff:*)",
-      "Bash(git log:*)",
-      "Bash(ls:*)",
-      "Bash(find:*)",
-      "Bash(rg:*)",
-      "Bash(cat:*)",
-      "Bash(wc:*)",
-      "Bash(tree:*)"
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)"
     ]
   }
 }
